@@ -1,0 +1,16 @@
+[project]
+name = "cugpufit"
+version = "0.0.1"
+authors = [
+  { name="Xianghao Wang", email="wang.xianghao@outlook.com" },
+]
+description = "Levenberg-Marquardt Optimizer in CuNumeric"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3"
+]
+
+[project.urls]
+Homepage = "https://github.com/wang-xianghao/cugpufit"
+Issues = "https://github.com/wang-xianghao/cugpufit/issues"
