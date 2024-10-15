@@ -10,3 +10,7 @@ class Model(ABC):
     @abstractmethod
     def predict(self, inputs, train):
         pass
+
+    @abstractmethod
+    def update(self, updates):
+        pass

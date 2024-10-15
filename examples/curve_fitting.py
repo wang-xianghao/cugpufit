@@ -12,27 +12,35 @@ class SimpleDense(Model):
             return np.random.uniform(-limit, limit, shape, dtype=self.dtype)
 
         self.W1 = glorot_uniform((1, 20), 21)
-        self.b1 = np.zeros((1, 20), dtype=self.dtype)
+        self.b1 = np.zeros(20, dtype=self.dtype)
         self.W2 = glorot_uniform((20, 1), 21)
-        self.b2 = np.zeros((1, 1), dtype=self.dtype)
+        self.b2 = np.zeros(1, dtype=self.dtype)
+
+        self.parameters = [self.W1, self.b1, self.W2, self.b2]
     
     def predict(self, inputs, train=False):
+        N, D = inputs.shape
+
         # Calculate outputs
-        z = np.matmul(self.W1, self.inputs) + self.b1
-        a = np.tanh(z)
-        y = np.matmul(self.W2, a) + self.b2
+        y1 = np.tanh(inputs @ self.W1 + self.b1)
+        y2 = y1 @ self.W2 + self.b2
 
         if not train:
-            return y
-        
-        # Calculate jacobian
-        tanh_prime = 1 - np.square(a)
-        diag_tanh_prime = np.diag(tanh_prime)
-        self.jacobian = np.dot(self.W2, np.dot(diag_tanh_prime, self.W1))
+            return y2
 
-        return y
+        # TODO: Calculate jacobian by manual backpropagation
+        self.jacobian = None
+
+        return y2
+
+    def update(self, updates):
+        offset = 0
+        for p in self.parameters:
+            p += updates[offset:offset + p.size].reshape(p.shape)
+            offset += p.size
 
 if __name__ == '__main__':
     model = SimpleDense(MSE, dtype=np.float64)
 
-    print(MSE().loss_with_residuals(np.zeros(10), np.random.uniform(-1, 1, 10)))
+    model.predict(np.random.rand(100, 1), train=True)
+    print(model.jacobian)
