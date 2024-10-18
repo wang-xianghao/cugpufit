@@ -1,10 +1,11 @@
 import cunumeric as np
-# import numpy as np
-
 from itertools import accumulate
 
 from cugpufit.model import Model
 from cugpufit.losses.mse import MSE
+
+import sys
+np.set_printoptions(threshold=sys.maxsize)
 
 # TODO: data types in the model should be consistent
 class SimpleDense(Model):
@@ -39,11 +40,22 @@ class SimpleDense(Model):
         self.jacobian = np.empty((N, self.n_parameters), dtype=model.dtype)
         
         for i in range(N):
-            self.jacobian[i:i+1, self.offsets[0]:self.offsets[1]] = y1[i, :] * self.W2.T
-            self.jacobian[i:i+1, 0:self.offsets[0]] = np.dot(inputs[i, :], self.jacobian[i:i+1, self.offsets[0]:self.offsets[1]])
+            dtanh = 1 - np.square(y1[i, :])
+            self.jacobian[i:i+1, self.offsets[0]:self.offsets[1]] = dtanh * self.W2.T
+            self.jacobian[i:i+1, 0:self.offsets[0]] = np.dot(inputs[i:i+1, :].T, self.jacobian[i:i+1, self.offsets[0]:self.offsets[1]])
             self.jacobian[i:i+1, self.offsets[1]:self.offsets[2]] = y1[i, :]
             self.jacobian[i:i+1, self.offsets[2]:self.offsets[3]] = 1.0
+            
+        # def predict_test(W1, b1, W2, b2):
+        #     y1 = np.tanh(inputs @ W1 + b1)
+        #     y2 = y1 @ W2 + b2
+        #     return y2
 
+        # f = lambda W: predict_test(W, self.b1, self.W2, self.b2)
+        # g = lambda W: predict_test(self.W1, W, self.W2, self.b2)
+        # # print(autograd.jacobian(f)(self.W1).reshape(-1, 20))
+        # print(autograd.jacobian(f)(self.W1))
+        
         return y2
 
     def update(self, updates):
@@ -55,5 +67,5 @@ class SimpleDense(Model):
 if __name__ == '__main__':
     model = SimpleDense(MSE, dtype=np.float64)
 
-    model.predict(np.random.rand(100, 1), train=True)
+    model.predict(np.random.rand(1, 1), train=True)
     print(model.jacobian)
