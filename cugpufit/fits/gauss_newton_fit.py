@@ -19,7 +19,7 @@ class GaussNewtonFit(Fit):
 
         loss_val = self.loss(outputs, targets)
             
-        return updates, loss_val
+        return np.squeeze(updates), loss_val
     
     def fit(self, inputs, targets, epoches, batch_size=-1, verbose=True):
         if batch_size == -1:
