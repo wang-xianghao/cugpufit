@@ -1,0 +1,1 @@
+from .gauss_newton_fit import GaussNewtonFit
