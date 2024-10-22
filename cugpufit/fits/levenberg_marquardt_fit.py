@@ -56,14 +56,15 @@ class LevenbergMarquardtFit(Fit):
         np.multiply(normalization_factor, JJ, out=JJ)
         np.multiply(normalization_factor, rhs, out=rhs)
         
+        # Fit with damping
         loss = self.loss(targets, outputs)
-        
-        stop_training = False
-        attempt = 0
-        damping_factor = self.damping_algorithm.init_step(
-            self.damping_factor, loss)
-
-        while True:
+        singulars = 0 # Count singular Hessian's occurrences
+        invalid_updates = 0 # Count invalid updates
+        damping_factor = self.damping_algorithm.init_step(self.damping_factor, 
+                                                          JJ)
+        attempts = 0
+        while attempts < self.attempts_per_step:
+            attempts += 1
             update_computed = False
             try:
                 # Apply the damping to the gauss-newton hessian approximation.
@@ -73,67 +74,89 @@ class LevenbergMarquardtFit(Fit):
                 # overdetermined: updates = (J'*J + damping)^-1*J'*residuals
                 # underdetermined: updates = J'*(J*J' + damping)^-1*residuals
                 updates = self.compute_gauss_newton(J, JJ_damped, rhs)
-            except Exception as e:
-                print(f'Encountered singular Hessian: {e}')
+            except Exception as e: # Probably due to singular Hessian
+                singulars += 1
                 del e
-            else:                
+            else:
+                # Ensure all updates are invalid
                 if np.all(np.isfinite(updates)):
                     update_computed = True
                     self.model.update(updates)
-                                
-            if attempt < self.attempts_per_step:
-                attempt += 1
+                else:
+                    invalid_updates += 1
+            
+            if update_computed:
+                # Check whether updated model performs better; if not, restore old parameters
+                outputs = self.model.predict(inputs)
+                new_loss = self.loss(targets, outputs)
                 
-                if update_computed:
-                    outputs = self.model.predict(inputs)
-                    new_loss = self.loss(targets, outputs)
-                    
-                    if new_loss < loss:
-                        loss = new_loss
-                        damping_factor = self.damping_algorithm.decrease(
-                            damping_factor, loss)
-                        self.model.backup_parameters()
-                        break
-                    
-                    self.model.restore_parameters()
-                
-                damping_factor = self.damping_algorithm.increase(damping_factor, loss)
-                
-                stop_training = self.damping_algorithm.stop_training(
-                    damping_factor, loss)
-                
-                if stop_training:
+                if new_loss < loss:
+                    loss = new_loss
+                    damping_factor = self.damping_algorithm.decrease(damping_factor,
+                                                                     loss)
+                    self.model.backup_parameters()
                     break
-            else:
-                break
-        self.damping_factor = damping_factor
                 
-        return loss, attempt, damping_factor
+                self.model.restore_parameters()
+            
+            # Increase damping factor to prefer gradient descent
+            damping_factor = self.damping_algorithm.increase(damping_factor, loss)
+            stop_training = self.damping_algorithm.stop_training(damping_factor,
+                                                                 loss)
+            if stop_training:
+                break
+        
+        self.damping_factor = damping_factor
+        
+        return {'loss': loss,
+                'attempts': attempts,
+                'singulars': singulars,
+                'invalid_updates': invalid_updates}
     
-    def fit(self, inputs, targets, epoches, batch_size=-1, verbose=True):
+    def __epoch_start(self):
+        self.metrics_data = {
+            'loss': 0.0,
+            'attempts': 0,
+            'singulars': 0,
+            'invalid_updates': 0
+        }
+        self.elapsed_ms = 0.0
+        
+    def __epoch_end(self):
+        print(f'epoch {self.__epoch}/{self.__epoches} finished in {self.elapsed_ms} ms')
+        for name in self.metrics:
+            data = self.metrics_data[name]
+            print(f'\t{name}: {data}')
+        print()
+    
+    def __batch_start(self):
+        self.__start_time = letime()
+        
+    def __batch_end(self, results):
+        self.elapsed_ms += (letime() - self.__start_time) / 1e3
+        for name in self.metrics:
+            self.metrics_data[name] += results[name]
+    
+    def fit(self, inputs, targets, epoches, batch_size=-1, metrics: list[str]=['loss']):
         self.model.backup_parameters()
         
         if batch_size == -1:
             batch_size = inputs.shape[0]
 
+        self.metrics = metrics
+        self.__epoches = epoches
+        
+        # Split data into batches
         n_batches = inputs.shape[0] // batch_size
         assert n_batches * batch_size == inputs.shape[0]
-
         inputs_all = np.split(inputs, n_batches, axis=0)
         targets_all = np.split(targets, n_batches, axis=0)
 
         for epoch in range(1, epoches + 1):
-            if verbose:
-                t_start = letime()
-                
+            self.__epoch = epoch
+            self.__epoch_start()        
             for (inputs_batch, targets_batch) in zip(inputs_all, targets_all):
-                loss_val, attemp, damping_factor = self.fit_step(inputs_batch, targets_batch)
-                
-            if verbose:
-                t_end = letime()
-            
-            if verbose:
-                t_batch = (t_end - t_start) / (1e3 * n_batches)
-                
-            if verbose:
-                print(f'epoch {epoch}/{epoches} loss: {loss_val}, attemps: {attemp}, damping_factor: {damping_factor}, avg. batch time: {t_batch} ms')
+                self.__batch_start()
+                results = self.fit_step(inputs_batch, targets_batch)
+                self.__batch_end(results)
+            self.__epoch_end()

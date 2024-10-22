@@ -82,7 +82,10 @@ if __name__ == '__main__':
     model.compute_jacobian_with_outputs(X_train)
 
     # Train
-    lm.fit(X_train, Y_train, epoches=10, batch_size=batch_size)
+    lm.fit(X_train, Y_train, epoches=10, batch_size=batch_size, metrics=['loss',
+                                                                         'attempts',
+                                                                         'singulars',
+                                                                         'invalid_updates'])
 
     # Draw results
     X_test = np.linspace(-1, 1, n_samples, dtype=np.float64).reshape(n_samples, 1)
