@@ -88,7 +88,7 @@ if __name__ == '__main__':
     latent_units = 20
 
     X_train = np.linspace(-1, 1, n_samples, dtype=np.float64).reshape(n_samples, 1)
-    Y_train = np.sinc(X_train).reshape(n_samples, 1)
+    Y_train = np.sinc(10 * X_train).reshape(n_samples, 1)
     
     order = np.random.permutation(n_samples)
     X_train = X_train[order, :]
@@ -99,10 +99,13 @@ if __name__ == '__main__':
 
     # Warmup
     model.compute_jacobian_with_outputs(X_train)
+    
+    lm.fit(X_train, Y_train, epoches=10, batch_size=batch_size)
 
-    lm.fit(X_train, Y_train, epoches=100, batch_size=batch_size)
+    # Draw results
+    X_test = np.linspace(-1, 1, n_samples, dtype=np.float64).reshape(n_samples, 1)
+    Y_test = np.sinc(10 * X_test).reshape(n_samples, 1)
     
-    outputs = model.predict(X_train)
-    
-    plt.scatter(X_train[:, 0], outputs[:, 0])
-    plt.savefig('test.png')
+    plt.plot(X_test, Y_test, 'b-', label="reference")
+    plt.plot(X_test, model.predict(X_test), 'r--', label="lm")
+    plt.savefig('curve_fitting.png')
