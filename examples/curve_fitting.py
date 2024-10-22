@@ -1,6 +1,3 @@
-# from autograd import jacobian
-# import autograd.numpy as np
-
 import cunumeric as np
 import matplotlib.pyplot as plt
 
@@ -10,22 +7,22 @@ from cugpufit.fits import LevenbergMarquardtFit
 from cugpufit.losses import MeanSquaredError
 from cugpufit import Model
 
-
 class CurveModel(Model):
     def __init__(self, latent_units):
-        def glorot(units, shape):
-            limit = np.sqrt(6 / units)
+        def glorot_uniform(units, shape):
+            limit = np.sqrt(6.0 / units)
             return np.random.uniform(-limit, limit, shape)
         
         self.latent_units = latent_units
-        self.W1 = glorot(21, (1, self.latent_units))
+        self.W1 = glorot_uniform(21, (1, self.latent_units))
         self.b1 = np.zeros(self.latent_units)
-        self.W2 = glorot(21, (self.latent_units, 1))
+        self.W2 = glorot_uniform(21, (self.latent_units, 1))
         self.b2 = np.zeros(1)
-        self.backups = None
         
+        self.backups = None
         self.paramters = [self.W1, self.b1, self.W2, self.b2]
         self.paramters_sizes = list(map(lambda x: x.size, self.paramters))
+        self.num_parameters = sum(self.paramters_sizes)
         self.paramters_offsets = list(accumulate(self.paramters_sizes))
 
     def predict(self, inputs):
@@ -39,8 +36,7 @@ class CurveModel(Model):
         z = np.tanh(inputs @ self.W1 + self.b1)
         outputs = z @ self.W2 + self.b2
         
-        num_paramters = sum(self.paramters_sizes)
-        J = np.empty((inputs.shape[0], num_paramters))
+        J = np.empty((inputs.shape[0], self.num_paramters))
         
         # Compute jacobians
         # b1 jacobian
@@ -49,29 +45,9 @@ class CurveModel(Model):
         self.__view_paramter(0, J)[...] = (inputs[:, :, np.newaxis] @ 
                                             J_b1[:, np.newaxis, :]).reshape(inputs.shape[0], self.latent_units)
         # W2 jacobian
-        self.__view_paramter(2, J)[...]  = z
+        self.__view_paramter(2, J)[...] = z
         # b2 jacobian
         self.__view_paramter(3, J)[...] = 1.0
-        
-        # def predict_test(W1, b1, W2, b2, inputs):
-        #     return np.tanh(inputs @ W1 + b1) @ W2 + b2
-        
-        # TODO: verifying jacobian calculate, to be deleted
-        # fW1 = lambda W1: predict_test(W1, self.b1, self.W2, self.b2, inputs)
-        # expect = jacobian(fW1)(self.W1).reshape(inputs.shape[0], self.latent_units)
-        # print(np.sum(self.__view_paramter(0, J)[...] - expect))
-        
-        # fb1 = lambda b1: predict_test(self.W1, b1, self.W2, self.b2, inputs)
-        # expect = jacobian(fb1)(self.b1).reshape(inputs.shape[0], self.latent_units)
-        # print(np.sum(self.__view_paramter(1, J)[...] - expect))
-        
-        # fW2 = lambda W2: predict_test(self.W1, self.b1, W2, self.b2, inputs)
-        # expect = jacobian(fW2)(self.W2).reshape(inputs.shape[0], self.latent_units)
-        # print(np.sum(self.__view_paramter(2, J)[...] - expect))
-        
-        # fb2 = lambda b2: predict_test(self.W1, self.b1, self.W2, b2, inputs)
-        # expect = jacobian(fb2)(self.b2).reshape(inputs.shape[0], 1)
-        # print(np.sum(self.__view_paramter(3, J)[...] - expect))
 
         return J, outputs
 
@@ -92,9 +68,9 @@ if __name__ == '__main__':
     batch_size = 1000
     latent_units = 20
 
+    # Prepare train data
     X_train = np.linspace(-1, 1, n_samples, dtype=np.float64).reshape(n_samples, 1)
     Y_train = np.sinc(10 * X_train).reshape(n_samples, 1)
-    
     order = np.random.permutation(n_samples)
     X_train = X_train[order, :]
     Y_train = Y_train[order, :]
@@ -102,18 +78,15 @@ if __name__ == '__main__':
     model = CurveModel(latent_units)
     lm = LevenbergMarquardtFit(model, MeanSquaredError())
 
-    X_test = np.linspace(-1, 1, n_samples, dtype=np.float64).reshape(n_samples, 1)
-    Y_test = np.sinc(10 * X_test).reshape(n_samples, 1)
-
     # Warmup
-    plt.plot(X_test, model.predict(X_test), 'g--', label="init")
     model.compute_jacobian_with_outputs(X_train)
-    
+
+    # Train
     lm.fit(X_train, Y_train, epoches=10, batch_size=batch_size)
 
     # Draw results
-    # X_test = np.linspace(-1, 1, n_samples, dtype=np.float64).reshape(n_samples, 1)
-    # Y_test = np.sinc(10 * X_test).reshape(n_samples, 1)
+    X_test = np.linspace(-1, 1, n_samples, dtype=np.float64).reshape(n_samples, 1)
+    Y_test = np.sinc(10 * X_test).reshape(n_samples, 1)
     
     plt.plot(X_test, Y_test, 'b-', label="reference")
     plt.plot(X_test, model.predict(X_test), 'r--', label="lm")
