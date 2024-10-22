@@ -36,7 +36,7 @@ class CurveModel(Model):
         z = np.tanh(inputs @ self.W1 + self.b1)
         outputs = z @ self.W2 + self.b2
         
-        J = np.empty((inputs.shape[0], self.num_paramters))
+        J = np.empty((inputs.shape[0], self.num_parameters))
         
         # Compute jacobians
         # b1 jacobian
