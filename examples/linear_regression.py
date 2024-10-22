@@ -46,4 +46,7 @@ if __name__ == '__main__':
     model = LinearModel(n_dimensions)
     gauss_newton = GaussNewtonFit(model, MeanSquaredError())
 
+    # Warmup
+    model.compute_jacobian_with_outputs(X_train)
+
     gauss_newton.fit(X_train, Y_train, 10)
