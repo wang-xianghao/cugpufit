@@ -77,7 +77,7 @@ class LevenbergMarquardtFit(Fit):
                 print(f'Encountered singular Hessian: {e}')
                 del e
             else:
-                if not np.any(np.isinf(updates)):
+                if np.all(np.isfinite(updates)):
                     update_computed = True
                     self.model.update(np.squeeze(updates))
             
@@ -98,6 +98,7 @@ class LevenbergMarquardtFit(Fit):
                     self.model.restore_parameters()
                 
                 damping_factor = self.damping_algorithm.increase(damping_factor, loss)
+                
                 stop_training = self.damping_algorithm.stop_training(
                     damping_factor, loss)
                 
@@ -106,8 +107,8 @@ class LevenbergMarquardtFit(Fit):
             else:
                 break
         self.damping_factor = damping_factor
-        
-        return loss
+                
+        return loss, attempt, damping_factor
     
     def fit(self, inputs, targets, epoches, batch_size=-1, verbose=True):
         self.model.backup_parameters()
@@ -126,7 +127,7 @@ class LevenbergMarquardtFit(Fit):
                 t_start = letime()
                 
             for (inputs_batch, targets_batch) in zip(inputs_all, targets_all):
-                loss_val = self.fit_step(inputs_batch, targets_batch)
+                loss_val, attemp, damping_factor = self.fit_step(inputs_batch, targets_batch)
                 
             if verbose:
                 t_end = letime()
@@ -135,4 +136,4 @@ class LevenbergMarquardtFit(Fit):
                 t_batch = (t_end - t_start) / (1e3 * n_batches)
                 
             if verbose:
-                print(f'epoch {epoch}/{epoches} loss: {loss_val}, avg. batch time: {t_batch} ms')
+                print(f'epoch {epoch}/{epoches} loss: {loss_val}, attemps: {attemp}, damping_factor: {damping_factor}, avg. batch time: {t_batch} ms')
