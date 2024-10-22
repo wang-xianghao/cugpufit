@@ -13,11 +13,15 @@ from cugpufit import Model
 
 class CurveModel(Model):
     def __init__(self, latent_units):
+        def glorot(units, shape):
+            limit = np.sqrt(6 / units)
+            return np.random.uniform(-limit, limit, shape)
+        
         self.latent_units = latent_units
-        self.W1 = np.random.randn(1, self.latent_units)
-        self.b1 = np.random.randn(self.latent_units)
-        self.W2 = np.random.randn(self.latent_units, 1)
-        self.b2 = np.random.randn(1)
+        self.W1 = glorot(21, (1, self.latent_units))
+        self.b1 = np.zeros(self.latent_units)
+        self.W2 = glorot(21, (self.latent_units, 1))
+        self.b2 = np.zeros(1)
         self.backups = None
         
         self.paramters = [self.W1, self.b1, self.W2, self.b2]
