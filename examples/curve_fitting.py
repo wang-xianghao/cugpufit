@@ -85,6 +85,7 @@ class CurveModel(Model):
 
     def restore_parameters(self):
         self.W1, self.b1, self.W2, self.b2 = map(lambda x : x.copy(), self.backups)
+        self.paramters = [self.W1, self.b1, self.W2, self.b2]
         
 if __name__ == '__main__':
     n_samples = 20000
@@ -101,14 +102,18 @@ if __name__ == '__main__':
     model = CurveModel(latent_units)
     lm = LevenbergMarquardtFit(model, MeanSquaredError())
 
+    X_test = np.linspace(-1, 1, n_samples, dtype=np.float64).reshape(n_samples, 1)
+    Y_test = np.sinc(10 * X_test).reshape(n_samples, 1)
+
     # Warmup
+    plt.plot(X_test, model.predict(X_test), 'g--', label="init")
     model.compute_jacobian_with_outputs(X_train)
     
     lm.fit(X_train, Y_train, epoches=10, batch_size=batch_size)
 
     # Draw results
-    X_test = np.linspace(-1, 1, n_samples, dtype=np.float64).reshape(n_samples, 1)
-    Y_test = np.sinc(10 * X_test).reshape(n_samples, 1)
+    # X_test = np.linspace(-1, 1, n_samples, dtype=np.float64).reshape(n_samples, 1)
+    # Y_test = np.sinc(10 * X_test).reshape(n_samples, 1)
     
     plt.plot(X_test, Y_test, 'b-', label="reference")
     plt.plot(X_test, model.predict(X_test), 'r--', label="lm")

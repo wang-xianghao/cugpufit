@@ -44,7 +44,7 @@ class LevenbergMarquardtFit(Fit):
         g = np.linalg.solve(JJ, rhs)
         updates = np.matmul(J.T, g)
         
-        return updates
+        return np.squeeze(updates)
     
     def fit_step(self, inputs, targets):
         J, JJ, rhs, outputs = self.init_gauss_newton(inputs, targets)
@@ -76,11 +76,11 @@ class LevenbergMarquardtFit(Fit):
             except Exception as e:
                 print(f'Encountered singular Hessian: {e}')
                 del e
-            else:
+            else:                
                 if np.all(np.isfinite(updates)):
                     update_computed = True
-                    self.model.update(np.squeeze(updates))
-            
+                    self.model.update(updates)
+                                
             if attempt < self.attempts_per_step:
                 attempt += 1
                 
