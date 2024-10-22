@@ -11,13 +11,13 @@ class GaussNewtonFit(Fit):
     
     def fit_step(self, inputs, targets):        
         J, outputs = self.model.compute_jacobian_with_outputs(inputs)
-        residuals = self.loss.residuals(outputs, targets)
+        residuals = self.loss.residuals(targets, outputs)
         JJ = np.matmul(J.T, J)
         
         rhs = np.matmul(J.T, residuals)
         updates = np.linalg.solve(JJ, rhs)
 
-        loss_val = self.loss(outputs, targets)
+        loss_val = self.loss(targets, outputs)
             
         return np.squeeze(updates), loss_val
     

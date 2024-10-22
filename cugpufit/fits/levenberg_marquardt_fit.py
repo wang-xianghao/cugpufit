@@ -33,7 +33,7 @@ class LevenbergMarquardtFit(Fit):
     
     def __init_gauss_newton_underdetermined(self, inputs, targets):
         J, outputs = self.model.compute_jacobian_with_outputs(inputs)
-        residuals = self.loss.residuals(outputs, targets)
+        residuals = self.loss.residuals(targets, outputs)
         
         JJ = J @ J.T
         rhs = residuals
@@ -56,7 +56,7 @@ class LevenbergMarquardtFit(Fit):
         np.multiply(normalization_factor, JJ, out=JJ)
         np.multiply(normalization_factor, rhs, out=rhs)
         
-        loss = self.loss(outputs, targets)
+        loss = self.loss(targets, outputs)
         
         stop_training = False
         attempt = 0
@@ -86,7 +86,7 @@ class LevenbergMarquardtFit(Fit):
                 
                 if update_computed:
                     outputs = self.model.predict(inputs)
-                    new_loss = self.loss(outputs, targets)
+                    new_loss = self.loss(targets, outputs)
                     
                     if new_loss < loss:
                         loss = new_loss
