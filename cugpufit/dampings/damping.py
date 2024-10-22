@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 
 class Damping(ABC):
-    def __init__(self, starting_value=1e-3, 
-                 dec_factor=0.1, inc_factor=10.0,
-                 min_value=1e-10, max_value=1e+10):
+    def __init__(self, starting_value, dec_factor, inc_factor, min_value, max_value):
         self.starting_value = starting_value
         self.dec_factor = dec_factor
         self.inc_factor = inc_factor
@@ -12,5 +10,20 @@ class Damping(ABC):
         
     @abstractmethod
     def init_step(self, damping_factor, loss):
-        return damping_factor
-        
+        pass
+    
+    @abstractmethod
+    def decrease(self, damping_factor, loss):
+        pass
+    
+    @abstractmethod
+    def increase(self, damping_factor, loss):
+        pass 
+    
+    @abstractmethod
+    def stop_training(self, damping_factor, loss):
+        pass
+    
+    @abstractmethod
+    def apply(self, damping_factor, JJ):
+        pass

@@ -9,9 +9,5 @@ class Fit(ABC):
         self.loss = loss
         
     @abstractmethod
-    def fit_step(self, inputs, targets):
-        pass
-    
-    @abstractmethod
     def fit(self, inputs, targets):
         pass

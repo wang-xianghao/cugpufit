@@ -1,1 +1,2 @@
 from .gauss_newton_fit import GaussNewtonFit
+from .levenberg_marquardt_fit import LevenbergMarquardtFit

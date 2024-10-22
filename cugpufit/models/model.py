@@ -17,9 +17,9 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    def push_parameters(self):
+    def backup_parameters(self):
         pass
     
     @abstractmethod
-    def pop_parameters(self):
+    def restore_parameters(self):
         pass
