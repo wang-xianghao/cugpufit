@@ -26,6 +26,6 @@ class RegularDamping(Damping):
         return damping_factor >= self.max_value
     
     def apply(self, damping_factor, JJ):
-        damping = damping_factor * np.eye(JJ.shape[0], dtype=JJ.dtype)
+        damping = np.multiply(damping_factor, np.eye(JJ.shape[0], dtype=JJ.dtype), dtype=JJ.dtype)
         return damping + JJ
     

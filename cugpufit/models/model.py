@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 class Model(ABC):
-    def __init__(self):
+    def __init__(self, dtype):
         pass
     
     @abstractmethod
