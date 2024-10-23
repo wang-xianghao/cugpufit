@@ -9,7 +9,7 @@ class LinearModel(Model):
         self.dimensions = dimensions
         self.W = np.random.randn(self.dimensions, 1)
         self.b = np.zeros(1)
-        self.backups = []
+        self.backups = None
 
     def predict(self, inputs):
         return inputs @ self.W + self.b
@@ -23,15 +23,17 @@ class LinearModel(Model):
         return J, outputs
 
     def update(self, updates):
-        self.W += updates[0:self.dimensions]
-        self.b += updates[self.dimensions]
+        self.W += updates[0:self.dimensions].reshape(self.W.shape)
+        self.b += updates[self.dimensions].reshape(self.b.shape)
 
-    def push_parameters(self):
-        self.backups.append((self.W.copy(), self.b.copy()))
+    def backup_parameters(self):
+        self.backups = (self.W.copy(), self.b.copy())
 
-    def pop_parameters(self):
-        self.W, self.b = self.backups.pop()
+    def restore_parameters(self):
+        self.W, self.b = map(lambda x: x.copy(), self.backups)
     
+    def total_parameters(self):
+        return self.W.size() + self.b.size()
 
 if __name__ == '__main__':
     n_samples = 32768
