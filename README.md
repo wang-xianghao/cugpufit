@@ -26,3 +26,4 @@ Please see [examples/curve_fitting.py](./examples/curve_fitting.py) for details 
 
 # Limitations
 * Auto-differentiation is not supported, users should manually implement Jacobian computation in `model.compute_jacobian_with_outputs()`.
+* Currently only supporting the model with a single output. 
