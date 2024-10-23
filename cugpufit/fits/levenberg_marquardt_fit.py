@@ -10,27 +10,26 @@ from cugpufit.dampings import RegularDamping
 class LevenbergMarquardtFit(Fit):
     def __init__(self, model: Model, loss: Loss,
                  damping_algorithm: Damping=RegularDamping(),
-                 attempts_per_step: int=10):
+                 attempts_per_step: int=10,
+                 jacobian_max_num_rows: int=100):
         super().__init__(model, loss)
         
         self.damping_algorithm = damping_algorithm
         self.attempts_per_step = attempts_per_step
+        self.jacobian_max_num_rows = jacobian_max_num_rows
         
         self.damping_factor = self.damping_algorithm.starting_value
-        
-        # TODO: optimization on gauss-newton
-        # self.init_gauss_newton = None
-        # self.compute_gauss_newton = None
-        self.init_gauss_newton = self.__init_gauss_newton_underdetermined
-        self.compute_gauss_newton = self.__compute_gauss_newton_underdetermined
     
-    # TODO: add gauss-newton overdetermined
-    # def __init_gauss_newton_overdetermined(self, inputs, targets):
-    #     J, outputs = self.model.compute_jacobian_with_outputs(inputs)
-    #     residuals = self.loss(outputs, targets)
+    # TODO: may apply optimization
+    def __init_gauss_newton_overdetermined(self, inputs, targets):
+        J, outputs = self.model.compute_jacobian_with_outputs(inputs)
+        residuals = self.loss.residuals(targets, outputs)
         
-    #     JJ = J.T @ J
-    
+        JJ = J.T @ J
+        rhs = J.T @ residuals
+        
+        return J, JJ, rhs, outputs
+        
     def __init_gauss_newton_underdetermined(self, inputs, targets):
         J, outputs = self.model.compute_jacobian_with_outputs(inputs)
         residuals = self.loss.residuals(targets, outputs)
@@ -39,6 +38,10 @@ class LevenbergMarquardtFit(Fit):
         rhs = residuals
         
         return J, JJ, rhs, outputs
+    
+    def __compute_gauss_newton_overdetermined(self, J, JJ, rhs):
+        updates = np.linalg.solve(JJ, rhs)
+        return np.squeeze(updates)
     
     def __compute_gauss_newton_underdetermined(self, J, JJ, rhs):
         g = np.linalg.solve(JJ, rhs)
@@ -145,6 +148,14 @@ class LevenbergMarquardtFit(Fit):
 
         self.metrics = metrics
         self.__epoches = epoches
+        
+        # Choose gauss-newton method
+        if batch_size > self.model.total_parameters():
+            self.init_gauss_newton = self.__init_gauss_newton_overdetermined
+            self.compute_gauss_newton = self.__compute_gauss_newton_overdetermined
+        else:
+            self.init_gauss_newton = self.__init_gauss_newton_underdetermined
+            self.compute_gauss_newton = self.__compute_gauss_newton_underdetermined
         
         # Split data into batches
         n_batches = inputs.shape[0] // batch_size

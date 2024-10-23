@@ -63,6 +63,9 @@ class CurveModel(Model):
         self.W1, self.b1, self.W2, self.b2 = map(lambda x : x.copy(), self.backups)
         self.paramters = [self.W1, self.b1, self.W2, self.b2]
         
+    def total_parameters(self):
+        return self.num_parameters
+        
 if __name__ == '__main__':
     n_samples = 20000
     batch_size = 1000
@@ -82,7 +85,7 @@ if __name__ == '__main__':
     model.compute_jacobian_with_outputs(X_train)
 
     # Train
-    lm.fit(X_train, Y_train, epoches=10, batch_size=batch_size, metrics=['loss',
+    lm.fit(X_train, Y_train, epoches=100, batch_size=batch_size, metrics=['loss',
                                                                          'attempts',
                                                                          'singulars',
                                                                          'invalid_updates'])

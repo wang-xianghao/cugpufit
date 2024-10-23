@@ -23,3 +23,7 @@ class Model(ABC):
     @abstractmethod
     def restore_parameters(self):
         pass
+    
+    @abstractmethod
+    def total_parameters(self):
+        pass
